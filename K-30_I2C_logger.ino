@@ -95,6 +95,7 @@ void loop()
   digitalWrite(POWER, HIGH);
   delay(10);    // important delay to ensure SPI bus is properly activated
   RTC.alarmFlagClear();    // clear alarm flag
+  RTC.checkDST();  // check and account for Daylight Saving Time in US. Comment this line out for other countries
   if(!sd.init(SPI_FULL_SPEED, SDcsPin))    // very important - reinitialize SD card on the SPI bus
   {
     delay(10);
