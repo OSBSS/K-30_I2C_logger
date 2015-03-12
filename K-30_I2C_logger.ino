@@ -1,5 +1,6 @@
 //****************************************************************
-// 3/5/2015 - Testing K-30 CO2 sensor on I2C protocol - saving data to sd card
+// 3/12/2015
+// Testing K-30 CO2 sensor on I2C protocol - saving data to sd card
 
 //****************************************************************
 
@@ -9,43 +10,46 @@
 #include <Wire.h>
 #include <SdFat.h>
 
-PowerSaver chip;  // declare object for PowerSaver class
+// Launch Variables   ******************************
+long interval = 60;  // set logging interval in SECONDS, eg: set 300 seconds for an interval of 5 mins
+int dayStart = 12, hourStart = 14, minStart = 30;    // define logger start time: day of the month, hour, minute
+char filename[15] = "log.csv";    // Set filename Format: "12345678.123". Cannot be more than 8 characters in length, contain spaces or begin with a number
 
-// Main code stuff   ******************************
-int CO2ppm = 0;
-int SDcsPin = 9;
-long interval = 60;  // interval in seconds (value automatically assigned by the GUI)
-#define POWER 4
-
-// RTC stuff   ******************************
-DS3234 RTC;    // declare object for DS3234 class
-int dayStart = 5, hourStart = 18, minStart = 30;    // start time: day of the month, hour, minute (values automatically assigned by the GUI)
-
-// SD card stuff   ******************************
+// Global objects and variables   ******************************
+#define POWER 4    // pin 4 supplies power to microSD card breakout and SHT15 sensor
 #define LED 7  // pin 7 controls LED
-SdFat sd;
-SdFile file;
-char filename[15] = "logg.csv";    // file name is automatically assigned by GUI. Format: "12345678.123". Cannot be more than 8 characters in length
+int SDcsPin = 9; // pin 9 is CS pin for MicroSD breakout
+int SHT_clockPin = 3;  // pin used for SCK on SHT15 breakout
+int SHT_dataPin = 5;  // pin used for DATA on SHT15 breakout
 
-// Interrupt stuff ****************************************************************
-ISR(PCINT0_vect)  // Setup interrupts on digital pin 8
+PowerSaver chip;  	// declare object for PowerSaver class
+DS3234 RTC;    // declare object for DS3234 class
+SHT15 sensor(SHT_clockPin, SHT_dataPin);  // declare object for SHT15 class
+SdFat sd; 		// declare object for SdFat class
+SdFile file;		// declare object for SdFile class
+
+int CO2ppm = 0;
+
+// ISR ****************************************************************
+ISR(PCINT0_vect)  // Interrupt Vector Routine to be executed when pin 8 receives an interrupt.
 {
-  asm("nop");
   //PORTB ^= (1<<PORTB1);
+  asm("nop");
 }
 
 // setup ****************************************************************
 void setup()
 {
   Serial.begin(19200); // open serial at 19200 bps
-  pinMode(LED, OUTPUT);
+  
+  pinMode(LED, OUTPUT); // set output pins
   pinMode(POWER, OUTPUT);
+  
   digitalWrite(POWER, HIGH);
-  Serial.println(RTC.timeStamp());
+  delay(1);    // give some delay to ensure RTC and SD are initialized properly
   
-  Wire.begin();
+  Wire.begin();  // initialize I2C using Wire.h library
   
-  delay(50);    // give some delay to ensure SD card is turned on properly
   if(!sd.init(SPI_FULL_SPEED, SDcsPin))  // initialize SD card on the SPI bus
   {
     delay(10);
@@ -53,7 +57,7 @@ void setup()
   }
   else
   {
-    delay(50);
+    delay(10);
     file.open(filename, O_CREAT | O_APPEND | O_WRITE);  // open file in write mode and append data to the end of file
     delay(1);
     String time = RTC.timeStamp();    // get date and time from RTC
@@ -65,12 +69,12 @@ void setup()
                      // give some delay by blinking status LED to wait for the file to properly close
     digitalWrite(LED, HIGH);
     delay(10);
-    digitalWrite(LED, LOW);
-    delay(10);    
+    digitalWrite(LED, LOW);  
   }
   RTC.checkInterval(hourStart, minStart, interval); // Check if the logging interval is in secs, mins or hours
   RTC.alarm2set(dayStart, hourStart, minStart);  // Configure begin time
   RTC.alarmFlagClear();  // clear alarm flag
+  
   chip.sleepInterruptSetup();    // setup sleep function on the ATmega328p. Power-down mode is used here
 }
 
@@ -79,9 +83,10 @@ void loop()
 {
   digitalWrite(POWER, LOW);
   delay(1);  // give some delay for SD card power to be low before processor sleeps to avoid it being stuck
+  
   chip.turnOffADC();    // turn off ADC to save power
   chip.turnOffSPI();  // turn off SPI bus to save power
-  chip.turnOffWDT();  // turn off WatchDog Timer to save power
+  //chip.turnOffWDT();  // turn off WatchDog Timer to save power (does not work for Pro Mini - only works for Uno)
   chip.turnOffBOD();    // turn off Brown-out detection to save power
   
   
@@ -92,10 +97,18 @@ void loop()
                        
   chip.turnOnADC();    // enable ADC after processor wakes up
   chip.turnOnSPI();   // turn on SPI bus once the processor wakes up
-  digitalWrite(POWER, HIGH);
-  delay(10);    // important delay to ensure SPI bus is properly activated
+  delay(1);    // important delay to ensure SPI bus is properly activated
+  
   RTC.alarmFlagClear();    // clear alarm flag
-  RTC.checkDST();  // check and account for Daylight Saving Time in US. Comment this line out for other countries
+  pinMode(POWER OUTPUT); 
+  digitalWrite(POWER, HIGH);
+  delay(1);    // give delay to let the SD card get to full powa
+  
+  RTC.checkDST();  // check and account for Daylight Saving Time in US
+  
+  CO2ppm = GetCO2(0x41);
+    delay(50); // give some delay to ensure CO2 data is properly received from sensor
+  
   if(!sd.init(SPI_FULL_SPEED, SDcsPin))    // very important - reinitialize SD card on the SPI bus
   {
     delay(10);
@@ -103,21 +116,12 @@ void loop()
   }
   else
   {
-    delay(50);
+    delay(10);
     file.open(filename, O_WRITE | O_AT_END);  // open file in write mode
     delay(1);
-    String time = RTC.timeStamp();    // get date and time from RTC
-    SPCR = 0;
     
-    //int retry = 0;
-    //measure:
-    CO2ppm = GetCO2(0x41);
-    delay(50);
-    //if(CO2ppm == -1 && retry < 5)  // try getting CO2 value accurately at least 5 times
-    //{
-    //  retry++;
-    //  goto measure;
-    //}
+    String time = RTC.timeStamp();    // get date and time from RTC
+    SPCR = 0;  // reset SPI control register
     
     file.print(time);
     file.print(",");
@@ -129,7 +133,6 @@ void loop()
     digitalWrite(LED, HIGH);
     delay(10);
     digitalWrite(LED, LOW);
-    delay(10);
   }
   RTC.setNextAlarm();      //set next alarm before sleeping
   delay(1);
@@ -138,15 +141,15 @@ void loop()
 // Get CO2 concentration ****************************************************************
 int GetCO2(int address)
 {
-  int CO2ppm;
-  byte recieved[4] = {0,0,0,0};
+  byte recieved[4] = {0,0,0,0}; // create an array to store bytes received from sensor
+  
   Wire.beginTransmission(address);
   Wire.write(0x22);
   Wire.write(0x00);
   Wire.write(0x08);
   Wire.write(0x2A);
   Wire.endTransmission();
-  delay(20);
+  delay(20); // give delay to ensure transmission is complete
   
   Wire.requestFrom(address,4);
   delay(10);
