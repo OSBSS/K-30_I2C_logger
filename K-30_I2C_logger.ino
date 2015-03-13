@@ -12,7 +12,7 @@
 
 // Launch Variables   ******************************
 long interval = 60;  // set logging interval in SECONDS, eg: set 300 seconds for an interval of 5 mins
-int dayStart = 12, hourStart = 14, minStart = 30;    // define logger start time: day of the month, hour, minute
+int dayStart = 13, hourStart = 0, minStart = 30;    // define logger start time: day of the month, hour, minute
 char filename[15] = "log.csv";    // Set filename Format: "12345678.123". Cannot be more than 8 characters in length, contain spaces or begin with a number
 
 // Global objects and variables   ******************************
@@ -24,7 +24,6 @@ int SHT_dataPin = 5;  // pin used for DATA on SHT15 breakout
 
 PowerSaver chip;  	// declare object for PowerSaver class
 DS3234 RTC;    // declare object for DS3234 class
-SHT15 sensor(SHT_clockPin, SHT_dataPin);  // declare object for SHT15 class
 SdFat sd; 		// declare object for SdFat class
 SdFile file;		// declare object for SdFile class
 
@@ -100,7 +99,7 @@ void loop()
   delay(1);    // important delay to ensure SPI bus is properly activated
   
   RTC.alarmFlagClear();    // clear alarm flag
-  pinMode(POWER OUTPUT); 
+  pinMode(POWER, OUTPUT); 
   digitalWrite(POWER, HIGH);
   delay(1);    // give delay to let the SD card get to full powa
   
