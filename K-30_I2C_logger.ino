@@ -16,16 +16,14 @@ int dayStart = 13, hourStart = 0, minStart = 30;    // define logger start time:
 char filename[15] = "log.csv";    // Set filename Format: "12345678.123". Cannot be more than 8 characters in length, contain spaces or begin with a number
 
 // Global objects and variables   ******************************
-#define POWER 4    // pin 4 supplies power to microSD card breakout and SHT15 sensor
-#define LED 7  // pin 7 controls LED
-int SDcsPin = 9; // pin 9 is CS pin for MicroSD breakout
-int SHT_clockPin = 3;  // pin used for SCK on SHT15 breakout
-int SHT_dataPin = 5;  // pin used for DATA on SHT15 breakout
-
 PowerSaver chip;  	// declare object for PowerSaver class
 DS3234 RTC;    // declare object for DS3234 class
 SdFat sd; 		// declare object for SdFat class
 SdFile file;		// declare object for SdFile class
+
+#define POWER 4    // pin 4 supplies power to microSD card breakout
+#define LED 7  // pin 7 controls LED
+int SDcsPin = 9; // pin 9 is CS pin for MicroSD breakout
 
 int CO2ppm = 0;
 
@@ -44,7 +42,7 @@ void setup()
   pinMode(LED, OUTPUT); // set output pins
   pinMode(POWER, OUTPUT);
   
-  digitalWrite(POWER, HIGH);
+  digitalWrite(POWER, HIGH);  // turn on SD card
   delay(1);    // give some delay to ensure RTC and SD are initialized properly
   
   Wire.begin();  // initialize I2C using Wire.h library
@@ -68,7 +66,7 @@ void setup()
                      // give some delay by blinking status LED to wait for the file to properly close
     digitalWrite(LED, HIGH);
     delay(10);
-    digitalWrite(LED, LOW);  
+    digitalWrite(LED, LOW);
   }
   RTC.checkInterval(hourStart, minStart, interval); // Check if the logging interval is in secs, mins or hours
   RTC.alarm2set(dayStart, hourStart, minStart);  // Configure begin time
