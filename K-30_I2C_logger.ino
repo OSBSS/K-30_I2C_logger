@@ -21,7 +21,7 @@ DS3234 RTC;    // declare object for DS3234 class
 SdFat sd; 		// declare object for SdFat class
 SdFile file;		// declare object for SdFile class
 
-#define POWER 4    // pin 4 supplies power to microSD card breakout
+#define POWER 3    // pin 3 supplies power to microSD card breakout
 #define LED 7  // pin 7 controls LED
 int SDcsPin = 9; // pin 9 is CS pin for MicroSD breakout
 
