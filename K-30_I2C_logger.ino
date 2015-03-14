@@ -1,8 +1,6 @@
-//****************************************************************
-// 3/12/2015
-// Testing K-30 CO2 sensor on I2C protocol - saving data to sd card
-
-//****************************************************************
+// OSBSS CO2 data logger based on SenseAir K-30 1% CO2 sensor
+// Communication with sensor using I2C protocol
+// Updated on: 3/13/2015
 
 #include <EEPROM.h>
 #include <DS3234lib3.h>
@@ -12,7 +10,7 @@
 
 // Launch Variables   ******************************
 long interval = 60;  // set logging interval in SECONDS, eg: set 300 seconds for an interval of 5 mins
-int dayStart = 13, hourStart = 0, minStart = 30;    // define logger start time: day of the month, hour, minute
+int dayStart = 13, hourStart = 21, minStart = 31;    // define logger start time: day of the month, hour, minute
 char filename[15] = "log.csv";    // Set filename Format: "12345678.123". Cannot be more than 8 characters in length, contain spaces or begin with a number
 
 // Global objects and variables   ******************************
@@ -94,17 +92,16 @@ void loop()
                        
   chip.turnOnADC();    // enable ADC after processor wakes up
   chip.turnOnSPI();   // turn on SPI bus once the processor wakes up
+  
+  digitalWrite(POWER, HIGH);
   delay(1);    // important delay to ensure SPI bus is properly activated
   
   RTC.alarmFlagClear();    // clear alarm flag
-  pinMode(POWER, OUTPUT); 
-  digitalWrite(POWER, HIGH);
-  delay(1);    // give delay to let the SD card get to full powa
-  
+
   RTC.checkDST();  // check and account for Daylight Saving Time in US
   
-  CO2ppm = GetCO2(0x41);
-    delay(50); // give some delay to ensure CO2 data is properly received from sensor
+  CO2ppm = GetCO2(0x68); // default address for K-30 CO2 sensor is 0x68
+  delay(50); // give some delay to ensure CO2 data is properly received from sensor
   
   if(!sd.init(SPI_FULL_SPEED, SDcsPin))    // very important - reinitialize SD card on the SPI bus
   {
