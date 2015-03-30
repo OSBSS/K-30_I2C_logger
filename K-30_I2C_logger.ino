@@ -1,6 +1,6 @@
 // OSBSS CO2 data logger based on SenseAir K-30 1% CO2 sensor
 // Communication with sensor using I2C protocol
-// Updated on: 3/25/2015
+// Updated on: 3/30/2015
 
 #include <EEPROM.h>
 #include <DS3234lib3.h>
@@ -46,7 +46,7 @@ void setup()
   
   Wire.begin();  // initialize I2C using Wire.h library
   
-  if(!sd.init(SPI_FULL_SPEED, SDcsPin))  // initialize SD card on the SPI bus
+  if(!sd.begin(SDcsPin, SPI_FULL_SPEED))  // initialize SD card on the SPI bus
   {
     delay(10);
     SDcardError();
@@ -109,7 +109,7 @@ void loop()
   if(CO2ppm <=0)
     CO2ppm = _CO2ppm;
   
-  if(!sd.init(SPI_FULL_SPEED, SDcsPin))    // very important - reinitialize SD card on the SPI bus
+  if(!sd.begin(SDcsPin, SPI_FULL_SPEED))    // very important - reinitialize SD card on the SPI bus
   {
     delay(10);
     SDcardError();
@@ -170,7 +170,7 @@ int GetCO2(int address)
     return -1;
 }
 
-// file timestamps
+// file timestamps ****************************************************************
 void PrintFileTimeStamp() // Print timestamps to data file. Format: year, month, day, hour, min, sec
 { 
   file.timestamp(T_WRITE, RTC.year, RTC.month, RTC.day, RTC.hour, RTC.minute, RTC.second);    // edit date modified
