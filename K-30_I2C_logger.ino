@@ -1,6 +1,6 @@
 // OSBSS CO2 data logger based on SenseAir K-30 1% CO2 sensor
 // Communication with sensor using I2C protocol
-// Updated on: 3/30/2015
+// Last edited on May 29, 2015 - old SdFat code
 
 #include <EEPROM.h>
 #include <DS3234lib3.h>
@@ -10,7 +10,7 @@
 
 // Launch Variables   ******************************
 long interval = 60;  // set logging interval in SECONDS, eg: set 300 seconds for an interval of 5 mins
-int dayStart = 25, hourStart = 16, minStart = 50;    // define logger start time: day of the month, hour, minute
+int dayStart = 14, hourStart = 13, minStart = 41;    // define logger start time: day of the month, hour, minute
 char filename[15] = "log.csv";    // Set filename Format: "12345678.123". Cannot be more than 8 characters in length, contain spaces or begin with a number
 
 // Global objects and variables   ******************************
@@ -46,7 +46,7 @@ void setup()
   
   Wire.begin();  // initialize I2C using Wire.h library
   
-  if(!sd.begin(SDcsPin, SPI_FULL_SPEED))  // initialize SD card on the SPI bus
+  if(!sd.init(SPI_FULL_SPEED, SDcsPin))  // initialize SD card on the SPI bus
   {
     delay(10);
     SDcardError();
@@ -98,9 +98,10 @@ void loop()
   delay(1);    // important delay to ensure SPI bus is properly activated
   
   RTC.alarmFlagClear();    // clear alarm flag
-  RTC.checkDST();  // check and account for Daylight Saving Time in US
   
-  CO2ppm = GetCO2(0x68); // default address for K-30 CO2 sensor is 0x68
+  //RTC.checkDST();  // check and account for Daylight Saving Time in US
+  
+  CO2ppm = GetCO2(0x41); // default address for K-30 CO2 sensor is 0x68
   delay(50); // give some delay to ensure CO2 data is properly received from sensor
   
   // account for dropped values
@@ -109,7 +110,7 @@ void loop()
   if(CO2ppm <=0)
     CO2ppm = _CO2ppm;
   
-  if(!sd.begin(SDcsPin, SPI_FULL_SPEED))    // very important - reinitialize SD card on the SPI bus
+  if(!sd.init(SPI_FULL_SPEED, SDcsPin))    // very important - reinitialize SD card on the SPI bus
   {
     delay(10);
     SDcardError();
