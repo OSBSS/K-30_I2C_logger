@@ -101,7 +101,7 @@ void loop()
   
   //RTC.checkDST();  // check and account for Daylight Saving Time in US
   
-  CO2ppm = GetCO2(0x41); // default address for K-30 CO2 sensor is 0x68
+  CO2ppm = GetCO2(0x68); // default address for K-30 CO2 sensor is 0x68
   delay(50); // give some delay to ensure CO2 data is properly received from sensor
   
   // account for dropped values
